@@ -1,11 +1,12 @@
-// src/server.js
+// server.js
 const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("✅ Bot is running!");
+  res.send("✅ Bot Discord en ligne !");
 });
 
-app.listen(3000, () => {
-  console.log("🌐 Serveur Express lancé sur le port 3000");
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`🌍 Serveur Express lancé sur le port ${port}`);
 });
