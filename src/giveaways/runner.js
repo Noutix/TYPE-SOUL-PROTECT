@@ -1,4 +1,4 @@
-const Giveaway = require("../../models/Giveaway");
+const Giveaway = require('../models/Giveaway');
 const { EmbedBuilder } = require("discord.js");
 
 module.exports = async (client) => {
