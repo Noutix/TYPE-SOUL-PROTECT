@@ -1,62 +1,52 @@
-const Giveaway = require('../../models/Giveaway');
-const { EmbedBuilder } = require("discord.js");
+const Giveaway = require("../../models/Giveaway");
 
 module.exports = async (client) => {
-  console.log("✅ Giveaway runner lancé...");
+    console.log("🎉 Giveaway runner lancé...");
 
-  setInterval(async () => {
-    try {
-      const giveaways = await Giveaway.find({ ended: false });
+    // Vérifie toutes les 10 secondes
+    setInterval(async () => {
+        const now = Date.now();
 
-      for (const giveaway of giveaways) {
-        if (Date.now() >= giveaway.endAt) {
-          try {
-            const channel = await client.channels.fetch(giveaway.channelId);
-            const message = await channel.messages.fetch(giveaway.messageId);
+        // Récupère les giveaways encore actifs et déjà terminés dans le temps
+        const giveaways = await Giveaway.find({
+            ended: false,
+            endAt: { $lt: now }
+        });
 
-            const reaction = message.reactions.cache.get("🎉");
-            const users = (await reaction?.users.fetch())?.filter(u => !u.bot);
+        for (const giveaway of giveaways) {
+            try {
+                const channel = await client.channels.fetch(giveaway.channelId);
+                if (!channel) continue;
 
-            let winners = [];
-            if (users && users.size > 0) {
-              winners = users.random(giveaway.winnersCount);
-              if (!Array.isArray(winners)) winners = [winners]; // sécurité si 1 gagnant
+                const message = await channel.messages.fetch(giveaway.messageId).catch(() => null);
+                if (!message) continue;
+
+                const reactions = message.reactions.cache.get("🎉");
+                if (!reactions) continue;
+
+                const users = await reactions.users.fetch();
+                const participants = users.filter(u => !u.bot);
+
+                if (participants.size === 0) {
+                    await channel.send("⚠️ Personne n’a participé au giveaway...");
+                } else {
+                    // Tire les gagnants
+                    const winners = participants.random(giveaway.winnersCount);
+                    channel.send(`🎉 Félicitations ${winners.map(w => `<@${w.id}>`).join(", ")} ! Vous avez gagné **${giveaway.prize}** 🎁`);
+                }
+
+                // Marque comme terminé
+                giveaway.ended = true;
+                await giveaway.save();
+
+                // Édite le message original
+                await message.edit({
+                    content: `🎉 **GIVEAWAY TERMINÉ** 🎉\nPrix : **${giveaway.prize}**\nGagnant(s) : ${participants.size > 0 ? participants.map(u => `<@${u.id}>`).join(", ") : "Aucun"}`
+                });
+
+            } catch (err) {
+                console.error("Erreur dans le runner de giveaway :", err);
             }
-
-            // Embed final (modification du message original)
-            const embed = new EmbedBuilder()
-              .setTitle("🎉 GIVEAWAY TERMINÉ 🎉")
-              .setDescription(`**${giveaway.prize}**`)
-              .addFields({
-                name: "Gagnant(s)",
-                value: winners.length > 0 ? winners.map(w => w.toString()).join(", ") : "Aucun gagnant",
-                inline: false
-              })
-              .setColor("Red")
-              .setFooter({ text: `Terminé à` })
-              .setTimestamp(new Date());
-
-            await message.edit({ embeds: [embed] });
-
-            // Message de félicitations séparé
-            if (winners.length > 0) {
-              await channel.send(
-                `🎉 Félicitations ${winners.map(w => w.toString()).join(", ")} ! Tu as gagné **${giveaway.prize}** !`
-              );
-            } else {
-              await channel.send(`❌ Aucun gagnant n'a pu être tiré pour **${giveaway.prize}**.`);
-            }
-
-            giveaway.ended = true;
-            await giveaway.save();
-
-          } catch (err) {
-            console.error(`❌ Erreur lors de la finalisation du giveaway ${giveaway._id}:`, err);
-          }
         }
-      }
-    } catch (error) {
-      console.error("❌ Erreur dans le runner giveaway :", error);
-    }
-  }, 60 * 1000); // toutes les 60 sec
+    }, 10000); // toutes les 10 secondes
 };
