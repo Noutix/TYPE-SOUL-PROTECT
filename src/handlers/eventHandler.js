@@ -10,16 +10,17 @@ module.exports = (client) => {
 
     const eventName = eventFolder.replace(/\\/g, '/').split('/').pop();
 
+    // 🔥 On supprime les anciens listeners avant d’en rajouter
+    client.removeAllListeners(eventName);
+
     client.on(eventName, async (...args) => {
       for (const eventFile of eventFiles) {
         const eventFunction = require(eventFile);
 
         try {
           if (typeof eventFunction === "function") {
-            // Cas 1 : export direct d'une fonction
             await eventFunction(...args, client);
           } else if (typeof eventFunction.execute === "function") {
-            // Cas 2 : export sous forme { name, execute }
             await eventFunction.execute(...args, client);
           } else {
             console.log(`⚠️ Mauvais export dans ${eventFile}`);
