@@ -5,22 +5,18 @@ const parseDuration = require("../../utils/parseDuration");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("giveaway-create")
-    .setDescription("🎉 Commandes pour les giveaways")
-    .addSubcommand(sub =>
-      sub
-        .setName("")
-        .setDescription("🎉 Lancer un giveaway")
-        .addStringOption(opt =>
-          opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
-        )
-        .addIntegerOption(opt =>
-          opt.setName("gagnants").setDescription("👥 Nombre de gagnants").setRequired(true)
-        )
-        .addStringOption(opt =>
-          opt.setName("temps").setDescription("⏳ Durée (ex: 1d, 2h, 30m, 45s)").setRequired(true)
-        )
-    ),
+  .setName("giveaway-create")
+  .setDescription("🎉 Lancer un giveaway")
+  .addStringOption(opt =>
+    opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
+  )
+  .addIntegerOption(opt =>
+    opt.setName("gagnants").setDescription("👥 Nombre de gagnants").setRequired(true)
+  )
+  .addStringOption(opt =>
+    opt.setName("temps").setDescription("⏳ Durée (ex: 1d, 2h, 30m, 45s)").setRequired(true)
+  ),
+
 
   async execute(interaction) {
     const prize = interaction.options.getString("prix");
