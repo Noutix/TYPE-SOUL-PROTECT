@@ -3,7 +3,9 @@ const { Client, IntentsBitField } = require('discord.js');
 const mongoose = require('mongoose');
 const eventHandler = require('./handlers/eventHandler.js');
 require("./server.js"); // Pour forcer Render à garder le service actif
+const runGiveaways = require('./giveaways/runner');
 
+// ⚡ On déclare le client en premier
 const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
@@ -21,6 +23,10 @@ const client = new Client({
 
     console.log('✅ Connecté à MongoDB.');
     eventHandler(client);
+
+    // 🚀 Lancement du système de giveaways
+    runGiveaways(client);
+
   } catch (error) {
     console.log(`❌ Erreur MongoDB: ${error.message}`);
   }
