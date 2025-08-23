@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, IntentsBitField } = require('discord.js');
 const mongoose = require('mongoose');
-const eventHandler = require('./handlers/eventHandler');
+const eventHandler = require('./handlers/eventHandler.js');
 require("./server.js"); // Pour forcer Render à garder le service actif
 
 const client = new Client({
