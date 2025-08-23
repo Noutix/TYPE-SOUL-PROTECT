@@ -1,72 +1,56 @@
-// commands/giveaway/reroll.js
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const Giveaway = require("../../models/Giveaway");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("giveaway-reroll")
-    .setDescription("🎉 Relancer un giveaway et tirer de nouveaux gagnants")
-    .addStringOption(opt =>
-      opt.setName("messageid")
-        .setDescription("🆔 ID du message du giveaway")
+    .setDescription("🎉 Relancer un gagnant pour un giveaway terminé.")
+    .addStringOption(option =>
+      option
+        .setName("id")
+        .setDescription("L'ID du message du giveaway")
         .setRequired(true)
-    )
-    .addIntegerOption(opt =>
-      opt.setName("gagnants")
-        .setDescription("Nombre de gagnants à relancer (par défaut 1)")
-        .setRequired(false)
     ),
 
   async execute(interaction) {
-    const messageId = interaction.options.getString("messageid");
-    const rerollCount = interaction.options.getInteger("gagnants") || 1;
+    const messageId = interaction.options.getString("id");
 
-    // Cherche le giveaway en DB
+    // On cherche le giveaway
     const giveaway = await Giveaway.findOne({ messageId });
     if (!giveaway) {
-      return interaction.reply({
-        content: "⚠️ Aucun giveaway trouvé avec cet ID.",
-        ephemeral: true,
-      });
+      return interaction.reply({ content: "⚠️ Aucun giveaway trouvé avec cet ID.", ephemeral: true });
     }
 
-    if (giveaway.status !== "FINISHED") {
-      return interaction.reply({
-        content: "⚠️ Ce giveaway n’est pas encore terminé.",
-        ephemeral: true,
-      });
+    if (!giveaway.ended) {
+      return interaction.reply({ content: "⚠️ Ce giveaway n'est pas encore terminé.", ephemeral: true });
     }
 
-    // Récupère le channel et le message
-    const channel = await interaction.guild.channels.fetch(giveaway.channelId);
-    const msg = await channel.messages.fetch(giveaway.messageId);
+    try {
+      const channel = await interaction.client.channels.fetch(giveaway.channelId);
+      const message = await channel.messages.fetch(giveaway.messageId);
 
-    // Récupère les participants
-    const reactions = msg.reactions.cache.get("🎉");
-    const users = reactions ? await reactions.users.fetch() : [];
-    const participants = users.filter(u => !u.bot).map(u => u.id);
+      const reaction = message.reactions.cache.get("🎉");
+      const users = (await reaction.users.fetch()).filter(u => !u.bot);
 
-    if (participants.length === 0) {
-      return interaction.reply({
-        content: "❌ Personne n’avait participé au giveaway...",
-        ephemeral: true,
-      });
+      if (!users.size) {
+        return interaction.reply({ content: "❌ Aucun participant trouvé.", ephemeral: true });
+      }
+
+      // Nouveau gagnant
+      const winner = users.random();
+
+      const rerollEmbed = new EmbedBuilder()
+        .setTitle("🎉 REROLL 🎉")
+        .setDescription(`Félicitations ${winner.toString()} ! Tu as été tiré au sort pour **${giveaway.prize}** 🎁`)
+        .setColor("Orange")
+        .setFooter({ text: `Reroll effectué à • ${new Date().toLocaleString()}` });
+
+      await channel.send({ embeds: [rerollEmbed] });
+
+      return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner.toString()}`, ephemeral: true });
+    } catch (err) {
+      console.error(err);
+      return interaction.reply({ content: "❌ Une erreur est survenue lors du reroll.", ephemeral: true });
     }
-
-    // Tire les nouveaux gagnants
-    const winners = [];
-    for (let i = 0; i < rerollCount; i++) {
-      const winner = participants[Math.floor(Math.random() * participants.length)];
-      if (winner && !winners.includes(winner)) winners.push(winner);
-    }
-
-    await msg.reply(
-      `🔄 Nouveau tirage (${rerollCount} gagnant${rerollCount > 1 ? "s" : ""}) ! 🎉 Félicitations ${winners.map(w => `<@${w}>`).join(", ")}`
-    );
-
-    return interaction.reply({
-      content: `✅ Giveaway reroll effectué avec succès (${rerollCount} gagnant${rerollCount > 1 ? "s" : ""}).`,
-      ephemeral: true,
-    });
   },
 };
