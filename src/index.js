@@ -3,7 +3,7 @@ const { Client, IntentsBitField } = require('discord.js');
 const mongoose = require('mongoose');
 const eventHandler = require('./handlers/eventHandler.js');
 require("./server.js"); // Pour forcer Render à garder le service actif
-const runGiveaways = require('./giveaways/runner');
+const runGiveaways = require('./commands/giveaways/runner.js');
 
 // ⚡ On déclare le client en premier
 const client = new Client({
