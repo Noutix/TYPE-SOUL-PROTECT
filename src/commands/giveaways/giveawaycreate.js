@@ -5,18 +5,17 @@ const parseDuration = require("../../utils/parseDuration");
 
 module.exports = {
   data: new SlashCommandBuilder()
-  .setName("giveaway-create")
-  .setDescription("🎉 Lancer un giveaway")
-  .addStringOption(opt =>
-    opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
-  )
-  .addIntegerOption(opt =>
-    opt.setName("gagnants").setDescription("👥 Nombre de gagnants").setRequired(true)
-  )
-  .addStringOption(opt =>
-    opt.setName("temps").setDescription("⏳ Durée (ex: 1d, 2h, 30m, 45s)").setRequired(true)
-  ),
-
+    .setName("giveaway-create")
+    .setDescription("🎉 Lancer un giveaway")
+    .addStringOption(opt =>
+      opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
+    )
+    .addIntegerOption(opt =>
+      opt.setName("gagnants").setDescription("👥 Nombre de gagnants").setRequired(true)
+    )
+    .addStringOption(opt =>
+      opt.setName("temps").setDescription("⏳ Durée (ex: 1d, 2h, 30m, 45s)").setRequired(true)
+    ),
 
   async execute(interaction) {
     const prize = interaction.options.getString("prix");
@@ -33,16 +32,15 @@ module.exports = {
 
     const endAt = new Date(Date.now() + durationMs);
 
-    // Embed stylé
+    // Calcul du temps restant en format lisible
+    const remaining = `<t:${Math.floor(endAt.getTime() / 1000)}:R>`; // ex: "dans 2 minutes"
+
+    // Embed stylé comme ton screen
     const embed = new EmbedBuilder()
       .setTitle("🎉 GIVEAWAY 🎉")
-      .setDescription(`**${prize}**\n\nRéagis avec 🎉 pour participer !`)
-      .addFields(
-        { name: "⏳ Durée", value: `\`${durationStr}\``, inline: true },
-        { name: "👥 Gagnants", value: `\`${winnersCount}\``, inline: true },
-        { name: "👑 Host", value: `<@${interaction.user.id}>`, inline: true }
+      .setDescription(
+        `**${prize}**\n\nRéagis avec 🎉 pour participer !\nFin dans : ${remaining}`
       )
-      .setFooter({ text: `Finira le ${endAt.toLocaleString()}` })
       .setColor("Random")
       .setTimestamp();
 
@@ -58,6 +56,7 @@ module.exports = {
       prize,
       winnersCount,
       endAt,
+      ended: false,
     });
   },
 };
