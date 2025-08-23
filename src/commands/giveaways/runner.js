@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require("discord.js");
 const Giveaway = require("../../models/Giveaway");
 
 module.exports = async (client) => {
@@ -27,22 +28,38 @@ module.exports = async (client) => {
                 const users = await reactions.users.fetch();
                 const participants = users.filter(u => !u.bot);
 
+                let winners = [];
                 if (participants.size === 0) {
                     await channel.send("⚠️ Personne n’a participé au giveaway...");
                 } else {
                     // Tire les gagnants
-                    const winners = participants.random(giveaway.winnersCount);
-                    channel.send(`🎉 Félicitations ${winners.map(w => `<@${w.id}>`).join(", ")} ! Vous avez gagné **${giveaway.prize}** 🎁`);
+                    winners = participants.random(giveaway.winnersCount);
+                    if (!Array.isArray(winners)) winners = [winners]; // si 1 seul gagnant
                 }
 
                 // Marque comme terminé
                 giveaway.ended = true;
                 await giveaway.save();
 
-                // Édite le message original
-                await message.edit({
-                    content: `🎉 **GIVEAWAY TERMINÉ** 🎉\nPrix : **${giveaway.prize}**\nGagnant(s) : ${participants.size > 0 ? participants.map(u => `<@${u.id}>`).join(", ") : "Aucun"}`
-                });
+                // === Embed final ===
+                const endEmbed = new EmbedBuilder()
+                    .setTitle("🎉 GIVEAWAY TERMINÉ 🎉")
+                    .setDescription(`${giveaway.prize}`)
+                    .addFields(
+                        { name: "Gagnant(s)", value: winners.length > 0 ? winners.map(w => `${w}`).join(", ") : "Aucun" },
+                        { name: "Terminé à", value: `<t:${Math.floor(Date.now() / 1000)}:f>` }
+                    )
+                    .setColor("Red");
+
+                // Met à jour le message du giveaway
+                await message.edit({ embeds: [endEmbed], content: null });
+
+                // Envoie un message de félicitations si gagnants
+                if (winners.length > 0) {
+                    await channel.send(
+                        `🎉 Félicitations ${winners.map(w => `${w}`).join(", ")} ! Tu as gagné **${giveaway.prize}** 🎁`
+                    );
+                }
 
             } catch (err) {
                 console.error("Erreur dans le runner de giveaway :", err);

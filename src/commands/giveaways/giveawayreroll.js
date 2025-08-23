@@ -45,7 +45,10 @@ module.exports = {
         .setColor("Orange")
         .setFooter({ text: `Reroll effectué à • ${new Date().toLocaleString()}` });
 
-      await channel.send({ embeds: [rerollEmbed] });
+      await channel.send({
+        embeds: [rerollEmbed],
+        allowedMentions: { users: [winner.id] } // ✅ Ping garanti
+      });
 
       return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner.toString()}`, ephemeral: true });
     } catch (err) {
