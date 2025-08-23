@@ -9,7 +9,7 @@ module.exports = {
     .setDescription("🎉 Commandes pour les giveaways")
     .addSubcommand(sub =>
       sub
-        .setName("giveaway-create")
+        .setName("")
         .setDescription("🎉 Lancer un giveaway")
         .addStringOption(opt =>
           opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
