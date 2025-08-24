@@ -15,7 +15,6 @@ module.exports = {
   async execute(interaction) {
     const messageId = interaction.options.getString("id");
 
-    // On cherche le giveaway
     const giveaway = await Giveaway.findOne({ messageId });
     if (!giveaway) {
       return interaction.reply({ content: "⚠️ Aucun giveaway trouvé avec cet ID.", ephemeral: true });
@@ -39,18 +38,24 @@ module.exports = {
       // Nouveau gagnant
       const winner = users.random();
 
+      // === Embed mis à jour ===
       const rerollEmbed = new EmbedBuilder()
-        .setTitle("🎉 REROLL 🎉")
-        .setDescription(`Félicitations ${winner.toString()} ! Tu as été tiré au sort pour **${giveaway.prize}** 🎁`)
-        .setColor("Orange")
-        .setFooter({ text: `Reroll effectué à • ${new Date().toLocaleString()}` });
+        .setTitle("🎉 GIVEAWAY TERMINÉ 🎉")
+        .setDescription(`${giveaway.prize}`)
+        .addFields(
+          { name: "Nouveau gagnant 🎉", value: `${winner}` },
+          { name: "Reroll effectué à", value: `<t:${Math.floor(Date.now() / 1000)}:f>` }
+        )
+        .setColor("Orange");
 
-      await channel.send({
-        embeds: [rerollEmbed],
-        allowedMentions: { users: [winner.id] } // ✅ Ping garanti
-      });
+      // Mets à jour le message original avec le nouveau gagnant
+      await message.edit({ embeds: [rerollEmbed] });
 
-      return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner.toString()}`, ephemeral: true });
+      // Envoie un message pour ping le nouveau gagnant juste après
+      await channel.send(`🎉 Félicitations ${winner} ! Tu as gagné **${giveaway.prize}** 🎁`);
+
+      return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner}`, ephemeral: true });
+
     } catch (err) {
       console.error(err);
       return interaction.reply({ content: "❌ Une erreur est survenue lors du reroll.", ephemeral: true });
