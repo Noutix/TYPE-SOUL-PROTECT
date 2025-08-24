@@ -1,4 +1,6 @@
+// src/commands/Moderation/ban.js
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
+const Sanction = require("../../models/Sanction"); // ✅ Assure-toi que ton modèle existe
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,13 +16,13 @@ module.exports = {
         .setDescription("La raison du bannissement")
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers) // ✅ Visible uniquement aux gens qui ont la permission
-    .setDMPermission(false), // ✅ Pas utilisable en MP
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .setDMPermission(false),
 
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
-    // Vérification supplémentaire (blindage)
+    // Vérification permissions
     if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
       return interaction.reply({
         content: "❌ Tu n’as pas la permission de bannir des membres.",
@@ -40,8 +42,19 @@ module.exports = {
       return interaction.reply({ content: "❌ Je ne peux pas bannir ce membre.", ephemeral: true });
     }
 
+    // ✅ On ban
     await member.ban({ reason });
 
+    // ✅ On log la sanction en DB
+    await Sanction.create({
+      userId: user.id,
+      type: "Ban",
+      reason: reason,
+      moderatorId: interaction.user.id,
+      date: new Date()
+    });
+
+    // ✅ Embed de confirmation
     const embed = new EmbedBuilder()
       .setTitle("🚫 Bannissement")
       .setColor("Red")
