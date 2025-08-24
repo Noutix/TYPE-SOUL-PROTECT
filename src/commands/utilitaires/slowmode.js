@@ -1,4 +1,6 @@
 // src/commands/moderation/slowmode.js
+const { PermissionFlagsBits } = require("discord.js");
+
 module.exports = {
   name: "slowmode",
   description: "Définit le slowmode (mode lent) d’un salon en secondes.",
@@ -18,10 +20,19 @@ module.exports = {
     },
   ],
 
-  permissionsRequired: ["ManageChannels"],
+  // 🔒 Seuls Admins/Fondateurs voient et peuvent utiliser cette commande
+  default_member_permissions: PermissionFlagsBits.Administrator,
   botPermissions: ["ManageChannels"],
 
   async execute(interaction) {
+    // Double sécurité : empêche les non-admins de l'utiliser
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission d’utiliser cette commande.",
+        ephemeral: true,
+      });
+    }
+
     const seconds = interaction.options.getInteger("seconds");
     const channel = interaction.options.getChannel("channel") || interaction.channel;
 

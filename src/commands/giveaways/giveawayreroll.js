@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const Giveaway = require("../../models/Giveaway");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("giveaway-reroll")
     .setDescription("🎉 Relancer un gagnant pour un giveaway terminé.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // 🔒 réservé Admins
     .addStringOption(option =>
       option
         .setName("id")
@@ -13,8 +14,17 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    // 🔐 Double sécurité
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de relancer un giveaway.",
+        ephemeral: true,
+      });
+    }
+
     const messageId = interaction.options.getString("id");
 
+    // Chercher le giveaway
     const giveaway = await Giveaway.findOne({ messageId });
     if (!giveaway) {
       return interaction.reply({ content: "⚠️ Aucun giveaway trouvé avec cet ID.", ephemeral: true });
@@ -35,29 +45,41 @@ module.exports = {
         return interaction.reply({ content: "❌ Aucun participant trouvé.", ephemeral: true });
       }
 
-      // Nouveau gagnant
-      const winner = users.random();
+      // --- Pondération boosters ---
+      const boosterRoleId = "1231705711885553665";
+      let weightedPool = [];
 
-      // === Embed mis à jour ===
+      for (const [, user] of users) {
+        weightedPool.push(user); // chance de base
+        const member = await channel.guild.members.fetch(user.id).catch(() => null);
+        if (member && member.roles.cache.has(boosterRoleId)) {
+          weightedPool.push(user); // +1 chance si booster
+        }
+      }
+
+      if (!weightedPool.length) {
+        return interaction.reply({ content: "❌ Aucun participant valide trouvé.", ephemeral: true });
+      }
+
+      // Tirage au sort
+      const winner = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+
       const rerollEmbed = new EmbedBuilder()
-        .setTitle("🎉 GIVEAWAY TERMINÉ 🎉")
-        .setDescription(`${giveaway.prize}`)
-        .addFields(
-          { name: "Nouveau gagnant 🎉", value: `${winner}` },
-          { name: "Reroll effectué à", value: `<t:${Math.floor(Date.now() / 1000)}:f>` }
-        )
-        .setColor("Orange");
+        .setTitle("🎉 REROLL 🎉")
+        .setDescription(`Félicitations ${winner.toString()} ! Tu as été tiré au sort pour **${giveaway.prize}** 🎁`)
+        .addFields({ name: "Avantage Boosters", value: "🚀 Les boosters du serveur ont **x2 chances** de gagner !" })
+        .setColor("Orange")
+        .setFooter({ text: `Reroll effectué le ${new Date().toLocaleString()}` });
 
-      // Mets à jour le message original avec le nouveau gagnant
-      await message.edit({ embeds: [rerollEmbed] });
+      await channel.send({
+        embeds: [rerollEmbed],
+        content: `${winner}`, // ping direct
+        allowedMentions: { users: [winner.id] }
+      });
 
-      // Envoie un message pour ping le nouveau gagnant juste après
-      await channel.send(`🎉 Félicitations ${winner} ! Tu as gagné **${giveaway.prize}** 🎁`);
-
-      return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner}`, ephemeral: true });
-
+      return interaction.reply({ content: `✅ Nouveau gagnant tiré : ${winner.toString()}`, ephemeral: true });
     } catch (err) {
-      console.error(err);
+      console.error("Erreur reroll:", err);
       return interaction.reply({ content: "❌ Une erreur est survenue lors du reroll.", ephemeral: true });
     }
   },

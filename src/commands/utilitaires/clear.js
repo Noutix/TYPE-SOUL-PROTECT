@@ -1,20 +1,17 @@
 // src/commands/moderation/clear.js
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 
 module.exports = {
-  name: "clear",
-  description: "Supprime un certain nombre de messages dans le salon.",
+  data: new SlashCommandBuilder()
+    .setName("clear")
+    .setDescription("Supprime un certain nombre de messages dans le salon.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // 🔒 Seulement Admins/Fondateurs
+    .addIntegerOption(option =>
+      option.setName("nombre")
+        .setDescription("Nombre de messages à supprimer (1-100).")
+        .setRequired(true)
+    ),
 
-  options: [
-    {
-      name: "nombre",
-      description: "Nombre de messages à supprimer (1-100).",
-      type: 4, // INTEGER
-      required: true,
-    },
-  ],
-
-  permissionsRequired: ["ManageMessages"],
   botPermissions: ["ManageMessages"],
 
   async execute(interaction) {

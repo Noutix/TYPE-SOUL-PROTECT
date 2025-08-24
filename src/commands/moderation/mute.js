@@ -8,8 +8,14 @@ const Sanction = require("../../models/Sanction.js");
 
 module.exports = {
   callback: async (interaction, client) => {
-    if (!interaction.isChatInputCommand()) {
-      return interaction.reply({ content: "❌ Cette commande doit être utilisée en slash.", ephemeral: true });
+    if (!interaction.isChatInputCommand()) return;
+
+    // 🔒 Double vérification des perms
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de mute des membres.",
+        ephemeral: true,
+      });
     }
 
     const target = interaction.options.getUser('membre');
@@ -36,7 +42,7 @@ module.exports = {
       const { default: prettyMs } = await import('pretty-ms');
       await targetMember.timeout(msDuration, reason);
 
-      // ✅ Enregistrement en DB
+      // ✅ Enregistrement DB
       await Sanction.create({
         userId: target.id,
         guildId: interaction.guild.id,
@@ -47,7 +53,7 @@ module.exports = {
         date: new Date()
       });
 
-      // ✅ DM
+      // ✅ DM au membre
       const dmEmbed = new EmbedBuilder()
         .setTitle("🔇 Vous avez été sanctionné")
         .setColor("Orange")
@@ -61,7 +67,7 @@ module.exports = {
 
       try { await target.send({ embeds: [dmEmbed] }); } catch {}
 
-      // ✅ Public
+      // ✅ Message public
       const embed = new EmbedBuilder()
         .setTitle("🔇 Sanction appliquée")
         .setColor("Red")
@@ -101,6 +107,8 @@ module.exports = {
       type: ApplicationCommandOptionType.String,
     },
   ],
+  defaultMemberPermissions: PermissionFlagsBits.ModerateMembers, // ✅ visible uniquement si permission
+  dmPermission: false,
   permissionsRequired: [PermissionFlagsBits.ModerateMembers],
   botPermissions: [PermissionFlagsBits.ModerateMembers],
 };

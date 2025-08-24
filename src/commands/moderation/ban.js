@@ -14,10 +14,19 @@ module.exports = {
         .setDescription("La raison du bannissement")
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers) // ✅ Visible uniquement aux gens qui ont la permission
+    .setDMPermission(false), // ✅ Pas utilisable en MP
 
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
+
+    // Vérification supplémentaire (blindage)
+    if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de bannir des membres.",
+        ephemeral: true,
+      });
+    }
 
     const user = interaction.options.getUser("membre");
     const reason = interaction.options.getString("raison") || "Aucune raison fournie";

@@ -1,12 +1,35 @@
 const { 
-  ApplicationCommandOptionType, 
+  SlashCommandBuilder,
   PermissionFlagsBits, 
   EmbedBuilder 
 } = require('discord.js');
 const Sanction = require("../../models/Sanction.js");
 
 module.exports = {
-  callback: async (client, interaction) => {
+  data: new SlashCommandBuilder()
+    .setName('kick')
+    .setDescription('👢 Expulser un membre du serveur.')
+    .addUserOption(option =>
+      option.setName('membre')
+        .setDescription('Le membre que vous voulez expulser.')
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName('raison')
+        .setDescription('La raison du kick.')
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers) // ✅ seuls ceux qui ont la perm kick voient la commande
+    .setDMPermission(false),
+
+  async execute(interaction) {
+    if (!interaction.isChatInputCommand()) return;
+
+    // 🔒 Sécurité supplémentaire côté code
+    if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
+      return interaction.reply({ content: "❌ Tu n’as pas la permission d’expulser un membre.", ephemeral: true });
+    }
+
     const targetUser = interaction.options.getUser('membre');
     const reason = interaction.options.getString('raison') || 'Pas de raison fourni';
 
@@ -61,22 +84,4 @@ module.exports = {
       await interaction.editReply("⚠️ Erreur pendant l'expulsion.");
     }
   },
-
-  name: 'kick',
-  description: 'Expulser un membre du serveur.',
-  options: [
-    {
-      name: 'membre',
-      description: 'Le membre que vous voulez expulser.',
-      type: ApplicationCommandOptionType.User,
-      required: true,
-    },
-    {
-      name: 'raison',
-      description: 'La raison du kick.',
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.KickMembers],
-  botPermissions: [PermissionFlagsBits.KickMembers],
 };

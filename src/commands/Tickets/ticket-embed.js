@@ -5,27 +5,37 @@ const {
   ModalBuilder, 
   TextInputBuilder, 
   TextInputStyle, 
-  ActionRowBuilder 
+  ActionRowBuilder, 
+  PermissionFlagsBits 
 } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-embed") // ✅ nom unique
     .setDescription("Configurer et envoyer l’embed de tickets")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // 🔒 Réservé aux admins
     .addChannelOption(opt =>
       opt.setName("salon")
         .setDescription("Le salon où envoyer l’embed")
-        .addChannelTypes([ChannelType.GuildText]) // ✅ tableau obligatoire
+        .addChannelTypes([ChannelType.GuildText])
         .setRequired(true)
     ),
 
   async execute(interaction) {
+    // 🔐 Double sécurité
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission d’utiliser cette commande.",
+        ephemeral: true,
+      });
+    }
+
     const salon = interaction.options.getChannel("salon");
 
     // Création du modal
     const modal = new ModalBuilder()
       .setCustomId(`ticketEmbedModal_${salon.id}`)
-      .setTitle("Configurer l'embed des tickets");
+      .setTitle("📩 Configuration de l’embed tickets");
 
     // Champs du formulaire
     const titre = new TextInputBuilder()
@@ -46,7 +56,7 @@ module.exports = {
       .setCustomId("embed_color")
       .setLabel("Couleur (optionnelle)")
       .setStyle(TextInputStyle.Short)
-      .setPlaceholder("Ex: #00ffcc")
+      .setPlaceholder("#00ffcc")
       .setRequired(false);
 
     const image = new TextInputBuilder()
@@ -56,7 +66,7 @@ module.exports = {
       .setPlaceholder("https://example.com/image.png")
       .setRequired(false);
 
-    // ✅ Ajout des champs dans des lignes séparées
+    // Organisation en ActionRows
     const rows = [
       new ActionRowBuilder().addComponents(titre),
       new ActionRowBuilder().addComponents(description),
@@ -66,7 +76,7 @@ module.exports = {
 
     modal.addComponents(rows);
 
-    // Ouvrir le formulaire
+    // Ouvrir le modal
     await interaction.showModal(modal);
   }
 };

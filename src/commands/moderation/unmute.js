@@ -1,36 +1,56 @@
 const { 
-  ApplicationCommandOptionType, 
+  SlashCommandBuilder, 
   PermissionFlagsBits, 
   EmbedBuilder 
-} = require('discord.js');
+} = require("discord.js");
 
 module.exports = {
-  callback: async (interaction, client) => {
-    if (!interaction.isChatInputCommand()) {
-      return interaction.reply({ content: "❌ Cette commande doit être utilisée en slash.", ephemeral: true });
+  data: new SlashCommandBuilder()
+    .setName("unmute")
+    .setDescription("🔊 Retire le mute d’un membre")
+    .addUserOption(option =>
+      option.setName("membre")
+        .setDescription("Le membre que vous voulez unmute.")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName("raison")
+        .setDescription("La raison de l’unmute.")
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers) // ✅ visible/utilisable seulement avec perm mute
+    .setDMPermission(false), // ❌ pas utilisable en DM
+
+  async execute(interaction) {
+    if (!interaction.isChatInputCommand()) return;
+
+    // 🔒 Vérification côté code
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de unmute des membres.",
+        ephemeral: true,
+      });
     }
 
-    const target = interaction.options.getUser('membre');
-    if (!target) {
-      return interaction.reply({ content: "❌ Aucun membre fourni.", ephemeral: true });
-    }
-
-    const reason = interaction.options.getString('raison') || 'Pas de raison fourni';
+    const target = interaction.options.getUser("membre");
+    const reason = interaction.options.getString("raison") || "Pas de raison fourni";
 
     await interaction.deferReply({ ephemeral: true });
 
     const targetMember = await interaction.guild.members.fetch(target.id).catch(() => null);
-    if (!targetMember) return interaction.editReply("❌ Ce membre n'est pas sur le serveur.");
+    if (!targetMember) {
+      return interaction.editReply("❌ Ce membre n'est pas sur le serveur.");
+    }
 
     // Vérification hiérarchie
     if (targetMember.roles.highest.position >= interaction.member.roles.highest.position) {
-      return interaction.editReply("❌ Vous ne pouvez pas unmute ce membre (hiérarchie de rôle trop élevée).");
+      return interaction.editReply("❌ Vous ne pouvez pas unmute ce membre (hiérarchie trop élevée).");
     }
 
     try {
-      await targetMember.timeout(null, reason); // ⚡ null = supprime le mute
+      await targetMember.timeout(null, reason); // ⚡ Retire le mute
 
-      // ✅ Embed envoyé en DM
+      // ✅ Embed DM
       const dmEmbed = new EmbedBuilder()
         .setTitle("🔊 Vous avez été unmute")
         .setColor("Green")
@@ -60,26 +80,8 @@ module.exports = {
 
       await interaction.editReply(`✅ ${targetMember} a bien été unmute.`);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       await interaction.editReply("⚠️ Erreur pendant l’unmute.");
     }
   },
-
-  name: 'unmute',
-  description: 'Retire le mute d’un membre.',
-  options: [
-    {
-      name: 'membre',
-      description: 'Le membre que vous voulez unmute.',
-      type: ApplicationCommandOptionType.User,
-      required: true,
-    },
-    {
-      name: 'raison',
-      description: 'La raison de l’unmute.',
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.ModerateMembers],
-  botPermissions: [PermissionFlagsBits.ModerateMembers],
 };

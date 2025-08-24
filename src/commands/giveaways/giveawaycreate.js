@@ -1,5 +1,5 @@
 // commands/giveaway/lancer.js
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const Giveaway = require("../../models/Giveaway");
 const parseDuration = require("../../utils/parseDuration");
 
@@ -7,6 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("giveaway-create")
     .setDescription("🎉 Lancer un giveaway")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // 🔒 Seuls les Admins/Fondateurs
     .addStringOption(opt =>
       opt.setName("prix").setDescription("🎁 Le prix du giveaway").setRequired(true)
     )
@@ -18,6 +19,14 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    // 🔐 Double sécurité
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de lancer un giveaway.",
+        ephemeral: true,
+      });
+    }
+
     const prize = interaction.options.getString("prix");
     const winnersCount = interaction.options.getInteger("gagnants");
     const durationStr = interaction.options.getString("temps");
@@ -32,10 +41,8 @@ module.exports = {
 
     const endAt = new Date(Date.now() + durationMs);
 
-    // Calcul du temps restant en format lisible
     const remaining = `<t:${Math.floor(endAt.getTime() / 1000)}:R>`; // ex: "dans 2 minutes"
 
-    // Embed stylé comme ton screen
     const embed = new EmbedBuilder()
       .setTitle("🎉 GIVEAWAY 🎉")
       .setDescription(
@@ -47,7 +54,6 @@ module.exports = {
     const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
     await msg.react("🎉");
 
-    // Sauvegarde en DB
     await Giveaway.create({
       guildId: interaction.guild.id,
       channelId: interaction.channel.id,

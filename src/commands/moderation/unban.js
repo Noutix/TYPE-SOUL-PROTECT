@@ -14,10 +14,19 @@ module.exports = {
         .setDescription("La raison du débannissement")
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers) // ✅ visible que si perm ban
+    .setDMPermission(false), // pas utilisable en DM
 
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
+
+    // 🔒 Sécurité côté code
+    if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de débannir des membres.",
+        ephemeral: true,
+      });
+    }
 
     const userId = interaction.options.getString("id");
     const reason = interaction.options.getString("raison") || "Aucune raison fournie";
@@ -37,7 +46,10 @@ module.exports = {
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      return interaction.reply({ content: `❌ Impossible de débannir l’utilisateur avec l’ID **${userId}**.`, ephemeral: true });
+      return interaction.reply({ 
+        content: `❌ Impossible de débannir l’utilisateur avec l’ID **${userId}**. Vérifie que l’ID est correct et que la personne est bien bannie.`,
+        ephemeral: true 
+      });
     }
   },
 };

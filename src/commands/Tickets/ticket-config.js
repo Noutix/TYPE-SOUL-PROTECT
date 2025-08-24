@@ -1,16 +1,33 @@
-const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  PermissionFlagsBits
+} = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ticket-config")
     .setDescription("Configurer l’embed de création de tickets.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // 🔒 réservé Admins
     .addChannelOption(option =>
-      option.setName("salon")
+      option
+        .setName("salon")
         .setDescription("Salon où envoyer l’embed de tickets")
         .setRequired(true)
     ),
 
   async execute(interaction) {
+    // 🔐 Double sécurité
+    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission de configurer les tickets.",
+        ephemeral: true,
+      });
+    }
+
     const salon = interaction.options.getChannel("salon");
 
     // Création du modal
